@@ -1,0 +1,376 @@
+```html
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake - Mustir Games</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #06110a;
+    color: white;
+    min-height: 100vh;
+}
+
+header {
+    padding: 22px 7%;
+    background: #0a1d11;
+    border-bottom: 1px solid #1b482a;
+}
+
+.logo {
+    color: #39e879;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    color: #39e879;
+    margin-bottom: 10px;
+}
+
+.info {
+    margin-bottom: 20px;
+    color: #aab8ad;
+}
+
+#score {
+    color: #39e879;
+    font-weight: bold;
+}
+
+canvas {
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1;
+    background: #07150c;
+    border: 2px solid #1b482a;
+    border-radius: 15px;
+    display: block;
+    margin: auto;
+}
+
+button {
+    margin-top: 20px;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    background: #39e879;
+    color: #06110a;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+.message {
+    margin-top: 15px;
+    color: #9caf9f;
+    min-height: 22px;
+}
+
+.back {
+    display: inline-block;
+    margin-top: 20px;
+    color: #39e879;
+    text-decoration: none;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">MUSTIR GAMES</div>
+</header>
+
+<div class="container">
+
+    <h1>🐍 Snake</h1>
+
+    <div class="info">
+        Skor: <span id="score">0</span>
+    </div>
+
+    <canvas id="game" width="420" height="420"></canvas>
+
+    <button id="restart">YENİDEN BAŞLAT</button>
+
+    <div class="message" id="message">
+        Yön tuşlarıyla yılanı hareket ettir.
+    </div>
+
+    <a class="back" href="index.html">← Ana Sayfaya Dön</a>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const grid = 21;
+const cell = canvas.width / grid;
+
+let snake;
+let food;
+let direction;
+let nextDirection;
+let score;
+let gameRunning;
+let gameLoop;
+
+function startGame() {
+
+    clearInterval(gameLoop);
+
+    snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+    ];
+
+    direction = { x: 1, y: 0 };
+    nextDirection = { x: 1, y: 0 };
+
+    score = 0;
+    gameRunning = true;
+
+    document.getElementById("score").textContent = score;
+
+    document.getElementById("message").textContent =
+        "Yön tuşlarıyla yılanı hareket ettir.";
+
+    createFood();
+    draw();
+
+    gameLoop = setInterval(update, 120);
+}
+
+function createFood() {
+
+    do {
+
+        food = {
+            x: Math.floor(Math.random() * grid),
+            y: Math.floor(Math.random() * grid)
+        };
+
+    } while (
+        snake.some(
+            part =>
+                part.x === food.x &&
+                part.y === food.y
+        )
+    );
+}
+
+function changeDirection(newDirection) {
+
+    if (!gameRunning) return;
+
+    if (
+        newDirection.x === -direction.x &&
+        newDirection.y === -direction.y
+    ) {
+        return;
+    }
+
+    nextDirection = newDirection;
+}
+
+function update() {
+
+    direction = nextDirection;
+
+    const head = {
+        x: snake[0].x + direction.x,
+        y: snake[0].y + direction.y
+    };
+
+    // Duvara çarpma
+    if (
+        head.x < 0 ||
+        head.x >= grid ||
+        head.y < 0 ||
+        head.y >= grid
+    ) {
+        gameOver();
+        return;
+    }
+
+    // Kendine çarpma
+    if (
+        snake.some(
+            part =>
+                part.x === head.x &&
+                part.y === head.y
+        )
+    ) {
+        gameOver();
+        return;
+    }
+
+    snake.unshift(head);
+
+    // Yemek
+    if (
+        head.x === food.x &&
+        head.y === food.y
+    ) {
+
+        score++;
+
+        document.getElementById("score").textContent =
+            score;
+
+        createFood();
+
+    } else {
+
+        snake.pop();
+
+    }
+
+    draw();
+}
+
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // Yılan
+    snake.forEach((part, index) => {
+
+        ctx.fillStyle =
+            index === 0
+                ? "#a7ffc5"
+                : "#39e879";
+
+        ctx.fillRect(
+            part.x * cell + 2,
+            part.y * cell + 2,
+            cell - 4,
+            cell - 4
+        );
+
+    });
+
+    // Yem
+    ctx.fillStyle = "white";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        food.x * cell + cell / 2,
+        food.y * cell + cell / 2,
+        cell * 0.28,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+}
+
+function gameOver() {
+
+    gameRunning = false;
+
+    clearInterval(gameLoop);
+
+    document.getElementById("message").textContent =
+        "Oyun bitti! Skorun: " +
+        score +
+        " — tekrar oynamak için butona bas.";
+
+    draw();
+}
+
+
+// Klavye kontrolleri
+
+document.addEventListener("keydown", function(event) {
+
+    if (event.key === "ArrowUp") {
+
+        event.preventDefault();
+
+        changeDirection({
+            x: 0,
+            y: -1
+        });
+
+    }
+
+    if (event.key === "ArrowDown") {
+
+        event.preventDefault();
+
+        changeDirection({
+            x: 0,
+            y: 1
+        });
+
+    }
+
+    if (event.key === "ArrowLeft") {
+
+        event.preventDefault();
+
+        changeDirection({
+            x: -1,
+            y: 0
+        });
+
+    }
+
+    if (event.key === "ArrowRight") {
+
+        event.preventDefault();
+
+        changeDirection({
+            x: 1,
+            y: 0
+        });
+
+    }
+
+});
+
+document
+    .getElementById("restart")
+    .addEventListener("click", startGame);
+
+
+// Oyunu başlat
+
+startGame();
+
+</script>
+
+</body>
+</html>
+```
