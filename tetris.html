@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tetris - Mustir Games</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #06110a;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+    }
+
+    h1 {
+        color: #39e879;
+        margin: 25px 0 10px;
+    }
+
+    .info {
+        margin-bottom: 15px;
+        color: #b8c8bd;
+    }
+
+    canvas {
+        background: #0b1e12;
+        border: 3px solid #39e879;
+        display: block;
+        margin: auto;
+    }
+
+    button {
+        margin-top: 18px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background: #39e879;
+        color: #06110a;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    a {
+        display: block;
+        margin-top: 18px;
+        color: #39e879;
+        text-decoration: none;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>🧱 Tetris</h1>
+
+<div class="info">
+    Skor: <span id="score">0</span>
+</div>
+
+<canvas id="game" width="240" height="480"></canvas>
+
+<button onclick="location.reload()">Yeniden Başlat</button>
+
+<a href="index.html">← Ana Sayfaya Dön</a>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const COLS = 10;
+const ROWS = 20;
+const SIZE = 24;
+
+let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let score = 0;
+
+const colors = [
+    null,
+    "#39e879",
+    "#00ffff",
+    "#ffcc00",
+    "#ff5555",
+    "#aa66ff",
+    "#ff9933",
+    "#3399ff"
+];
+
+const pieces = [
+    [[1,1,1,1]],
+    [[2,2],[2,2]],
+    [[0,3,0],[3,3,3]],
+    [[4,4,0],[0,4,4]],
+    [[0,5,5],[5,5,0]],
+    [[6,0,0],[6,6,6]],
+    [[0,0,7],[7,7,7]]
+];
+
+let player = {
+    x: 3,
+    y: 0,
+    shape: randomPiece()
+};
+
+function randomPiece() {
+    return pieces[Math.floor(Math.random() * pieces.length)].map(row => [...row]);
+}
+
+function drawCell(x, y, value) {
+    ctx.fillStyle = colors[value];
+    ctx.fillRect(x * SIZE, y * SIZE, SIZE - 1, SIZE - 1);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+            if (board[y][x]) {
+                drawCell(x, y, board[y][x]);
+            }
+        }
+    }
+
+    player.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value) {
+                drawCell(player.x + x, player.y + y, value);
+            }
+        });
+    });
+}
+
+function collision() {
+    for (let y = 0; y < player.shape.length; y++) {
+        for (let x = 0; x < player.shape[y].length; x++) {
+
+            if (!player.shape[y][x]) continue;
+
+            const newX = player.x + x;
+            const newY = player.y + y;
+
+            if (
+                newX < 0 ||
+                newX >= COLS ||
+                newY >= ROWS ||
+                (newY >= 0 && board[newY][newX])
+            ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function merge() {
+    player.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value) {
+                board[player.y + y][player.x + x] = value;
+            }
+        });
+    });
+}
+
+function clearLines() {
+    for (let y = ROWS - 1; y >= 0; y--) {
+        if (board[y].every(cell => cell !== 0)) {
+            board.splice(y, 1);
+            board.unshift(Array(COLS).fill(0));
+            score += 100;
+            document.getElementById("score").textContent = score;
+            y++;
+        }
+    }
+}
+
+function newPiece() {
+    player.shape = randomPiece();
+    player.x = 3;
+    player.y = 0;
+
+    if (collision()) {
+        alert("Oyun bitti! Skorun: " + score);
+        board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        score = 0;
+        document.getElementById("score").textContent = score;
+    }
+}
+
+function moveDown() {
+    player.y++;
+
+    if (collision()) {
+        player.y--;
+        merge();
+        clearLines();
+        newPiece();
+    }
+
+    draw();
+}
+
+function moveLeft() {
+    player.x--;
+
+    if (collision()) {
+        player.x++;
+    }
+
+    draw();
+}
+
+function moveRight() {
+    player.x++;
+
+    if (collision()) {
+        player.x--;
+    }
+
+    draw();
+}
+
+function rotate() {
+    const oldShape = player.shape;
+
+    player.shape = player.shape[0].map((_, i) =>
+        player.shape.map(row => row[i]).reverse()
+    );
+
+    if (collision()) {
+        player.shape = oldShape;
+    }
+
+    draw();
+}
+
+document.addEventListener("keydown", event => {
+
+    if (event.key === "ArrowLeft") {
+        moveLeft();
+    }
+
+    if (event.key === "ArrowRight") {
+        moveRight();
+    }
+
+    if (event.key === "ArrowDown") {
+        moveDown();
+    }
+
+    if (event.key === "ArrowUp") {
+        rotate();
+    }
+});
+
+setInterval(moveDown, 600);
+
+draw();
+</script>
+
+</body>
+</html>
